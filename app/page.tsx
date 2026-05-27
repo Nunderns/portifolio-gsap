@@ -527,19 +527,23 @@ export default function Home() {
               style={{ objectFit: 'contain' }}
               className="lookfor-frame"
             />
-            {[1, 2, 3].map((n) => (
-              <div
-                key={n}
-                className={`lookfor-overlay lookfor-overlay-${n}${lookFor[n - 1] ? ' is-shown' : ''}`}
-              >
-                <Image
-                  src={`/images/look-part/look-part${n}.webp`}
-                  alt=""
-                  fill
-                  style={{ objectFit: 'contain' }}
-                />
-              </div>
-            ))}
+            {[1, 2, 3].map((n) => {
+              const checkedCount = lookFor.filter(Boolean).length;
+              const isShown = checkedCount >= n;
+              return (
+                <div
+                  key={n}
+                  className={`lookfor-overlay lookfor-overlay-${n}${isShown ? ' is-shown' : ''}`}
+                >
+                  <Image
+                    src={`/images/look-part/look-part${n}.webp`}
+                    alt=""
+                    fill
+                    style={{ objectFit: 'contain' }}
+                  />
+                </div>
+              );
+            })}
           </div>
         </div>
       </section>
