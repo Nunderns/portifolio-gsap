@@ -9,8 +9,29 @@ gsap.registerPlugin(ScrollTrigger);
 
 const ROLE_CHARS = 'Desenvolvedor Fullstack'.split('');
 
+const tagIconMap: Record<string, string> = {
+  'Node.js': '/images/svg/node-fill-svgrepo-com.svg',
+  'Express': '/images/svg/express-svgrepo-com.svg',
+  'Nest.js': '/images/svg/nestjs-svgrepo-com.svg',
+  'PHP': '/images/svg/php-svgrepo-com.svg',
+  'Laravel': '/images/svg/laravel-svgrepo-com.svg',
+  'Python': '/images/svg/python-127-svgrepo-com.svg',
+  'FastAPI': '/images/svg/fastapi-svgrepo-com.svg',
+  'PostgreSQL': '/images/svg/postgresql-svgrepo-com.svg',
+  'Redis': '/images/svg/redis-svgrepo-com.svg',
+  'Next.js': '/images/svg/next-dot-js-svgrepo-com.svg',
+  'React': '/images/svg/react-svgrepo-com.svg',
+  'Tailwind CSS': '/images/svg/tailwind-css-svgrepo-com.svg',
+  'Shadcn UI': '/images/svg/shadcn-ui.svg',
+  'Docker': '/images/svg/docker-svgrepo-com.svg',
+  'GitHub Actions': '/images/svg/github-142-svgrepo-com.svg',
+  'MongoDB': '/images/svg/mongodb-svgrepo-com.svg',
+  'MySQL': '/images/svg/mysql-svgrepo-com.svg',
+  'AWS': '/images/svg/aws-svgrepo-com.svg',
+};
+
 const skills = [
-  'Node.js', 'TypeScript', 'React', 'Next.js',
+  'Node.js', 'React', 'Next.js',
   'REST APIs', 'PostgreSQL', 'MongoDB', 'Docker',
   'Git', 'Tailwind CSS', 'Testing', 'Cloud',
 ];
@@ -28,9 +49,10 @@ const LOOK_FOR_ITEMS = [
 ];
 
 const projects = [
-  { title: 'Plataforma de API', description: 'Arquitetura de serviços focada em backend com autenticação, persistência de dados e limites de API limpos.', tags: ['Node.js', 'TypeScript', 'PostgreSQL'] },
-  { title: 'Dashboard Fullstack', description: 'Interface web responsiva conectada a workflows backend, projetada para clareza e interações rápidas.', tags: ['Next.js', 'React', 'REST'] },
-  { title: 'Ferramentas de Automação', description: 'Utilitários de produtividade para desenvolvedores que reduzem tarefas repetitivas e melhoram visibilidade operacional.', tags: ['JavaScript', 'APIs', 'Docker'] },
+  { title: 'Backend', description: 'Arquitetura e desenvolvimento de APIs escaláveis com foco em performance, integrações, autenticação e manutenção de aplicações distribuídas.', tags: ['Node.js', 'Express', 'Nest.js', 'PHP', 'Laravel', 'Python', 'FastAPI','PostgreSQL', 'Redis'] },
+  { title: 'Frontend', description: 'Interfaces modernas e responsivas conectadas a serviços backend, priorizando experiência do usuário, performance e animações fluidas.', tags: ['Next.js', 'React', 'Tailwind CSS', 'Shadcn UI', 'GSAP'] },
+  { title: 'DevOps & Automation', description: 'Containerização, automações e pipelines para ambientes escaláveis, integração contínua e produtividade operacional.', tags: ['n8n', 'Docker', 'GitHub Actions'] },
+  { title: 'Arquitetura de Software & Práticas', description: 'Boas práticas de engenharia de software aplicadas em ambientes colaborativos e produtos escaláveis.', tags: ['Clean Architecture', 'SOLID', 'Design Patterns', 'CI/CD', 'Microservices', 'Testing'] },
 ];
 
 const sideImages = [
@@ -91,6 +113,8 @@ function spawnClickBurst(x: number, y: number) {
 export default function Home() {
   const rootRef = useRef<HTMLElement>(null);
   const [lookFor, setLookFor] = useState<boolean[]>([false, false, false]);
+  const [expandedProject, setExpandedProject] = useState<string | null>(null);
+  const popupRef = useRef<HTMLDivElement>(null);
 
   const toggleLookFor = (i: number) =>
     setLookFor(prev => prev.map((v, j) => (j === i ? !v : v)));
@@ -278,6 +302,20 @@ export default function Home() {
     };
   }, []);
 
+  // ── Tags popup animations
+  useEffect(() => {
+    if (expandedProject && popupRef.current) {
+      gsap.fromTo(popupRef.current,
+        { opacity: 0, scale: 0.9, y: 20 },
+        { opacity: 1, scale: 1, y: 0, duration: 0.4, ease: 'back.out(1.7)' }
+      );
+      gsap.fromTo('.popup-tags li',
+        { opacity: 0, y: 10 },
+        { opacity: 1, y: 0, duration: 0.3, stagger: 0.05, ease: 'power2.out', delay: 0.1 }
+      );
+    }
+  }, [expandedProject]);
+
   return (
     <main ref={rootRef} className="site-shell">
       <div className="noise-layer" />
@@ -368,7 +406,7 @@ export default function Home() {
           <p className="eyebrow">backend / desenvolvedor fullstack</p>
 
           {/* char-by-char headline */}
-          <h1 aria-label="Olá, sou Henri Okayama.">
+          <h1 aria-label="Olá, sou Henri Okayama">
             <>
               {'Olá, sou Henri'.split('').map((ch, i) => (
                 <span className="hero-char" key={`line1-${i}`} style={{ display: 'inline-block', whiteSpace: ch === ' ' ? 'pre' : 'normal' }}>
@@ -450,7 +488,18 @@ export default function Home() {
         <h2>Ferramentas que uso para entregar aplicações web sólidas.</h2>
         <div className="skill-cloud">
           {skills.map((skill) => (
-            <span className="skill-pill" key={skill}>{skill}</span>
+            <span className="skill-pill" key={skill}>
+              {tagIconMap[skill] && (
+                <Image 
+                  src={tagIconMap[skill]} 
+                  alt={skill} 
+                  width={18} 
+                  height={18}
+                  className="skill-icon"
+                />
+              )}
+              <span>{skill}</span>
+            </span>
           ))}
         </div>
       </section>
@@ -486,13 +535,70 @@ export default function Home() {
               <p>{project.description}</p>
             </div>
             <ul>
-              {project.tags.map((tag) => (
-                <li key={tag}>{tag}</li>
+              {project.tags.slice(0, 5).map((tag) => (
+                <li key={tag}>
+                  {tagIconMap[tag] && (
+                    <Image 
+                      src={tagIconMap[tag]} 
+                      alt={tag} 
+                      width={16} 
+                      height={16}
+                      className="tag-icon"
+                    />
+                  )}
+                  <span>{tag}</span>
+                </li>
               ))}
+              {project.tags.length > 5 && (
+                <li 
+                  className="show-more-btn" 
+                  onClick={() => setExpandedProject(project.title)}
+                >
+                  Mostrar mais +
+                </li>
+              )}
             </ul>
           </article>
         ))}
       </section>
+
+      {/* ── Tags Popup ── */}
+      {expandedProject && (
+        <div 
+          className="tags-popup-overlay" 
+          onClick={() => setExpandedProject(null)}
+        >
+          <div 
+            ref={popupRef}
+            className="tags-popup"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button 
+              className="popup-close" 
+              onClick={() => setExpandedProject(null)}
+            >
+              ✕
+            </button>
+            <h3>{projects.find(p => p.title === expandedProject)?.title}</h3>
+            <ul className="popup-tags">
+              {projects.find(p => p.title === expandedProject)?.tags.map((tag) => (
+                <li key={tag}>
+                  {tagIconMap[tag] && (
+                    <Image 
+                      src={tagIconMap[tag]} 
+                      alt={tag} 
+                      width={20} 
+                      height={20}
+                      className="tag-icon"
+                    />
+                  )}
+                  <span>{tag}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      )}
 
       {/* ── What I look for — interactive checklist with progressive illustration ── */}
       <section className="lookfor-section" data-panel data-tilt="left">

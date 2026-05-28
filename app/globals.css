@@ -8,6 +8,7 @@
   --panel: #2a2f28;
   --panel-soft: #efe1ca;
   --ink: #252822;
+  --pixel-color: #f2e3cf;
 }
 
 * {
@@ -462,12 +463,21 @@ a {
 
 .skill-pill {
   display: inline-flex;
+  align-items: center;
+  gap: 8px;
   padding: 14px 19px;
   color: var(--foreground);
   background: var(--ink);
   border-radius: 999px;
   font-size: clamp(15px, 1.5vw, 20px);
   cursor: default;
+}
+
+.skill-icon {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  filter: brightness(0) invert(1);
 }
 
 .timeline {
@@ -531,17 +541,118 @@ a {
 .work-card ul {
   display: flex;
   flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 8px;
+  justify-content: center;
+  gap: 6px;
   list-style: none;
+  width: 100%;
+  max-width: 200px;
 }
 
 .work-card li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   padding: 8px 12px;
   color: var(--foreground);
   border: 1px solid var(--border);
   border-radius: 999px;
   font-size: 13px;
+}
+
+.show-more-btn {
+  cursor: pointer;
+  background: var(--accent);
+  color: var(--ink);
+  border-color: var(--accent) !important;
+  font-weight: 600;
+  transition: transform 0.2s ease, background 0.2s ease;
+}
+
+.show-more-btn:hover {
+  transform: scale(1.05);
+  background: var(--accent-hover);
+}
+
+/* ── Tags Popup ── */
+.tags-popup-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  padding: 20px;
+}
+
+.tags-popup {
+  position: relative;
+  background: var(--panel-soft);
+  color: var(--ink);
+  border-radius: 24px;
+  padding: 32px;
+  max-width: 480px;
+  width: 100%;
+  box-shadow: 0 28px 80px rgba(0, 0, 0, 0.4);
+}
+
+.popup-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(37, 40, 34, 0.1);
+  border: none;
+  border-radius: 999px;
+  font-size: 18px;
+  cursor: pointer;
+  color: var(--ink);
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.popup-close:hover {
+  background: rgba(37, 40, 34, 0.2);
+  transform: rotate(90deg);
+}
+
+.tags-popup h3 {
+  font-size: clamp(24px, 3vw, 32px);
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  margin-bottom: 24px;
+  line-height: 1;
+}
+
+.popup-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  list-style: none;
+}
+
+.popup-tags li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: var(--ink);
+  color: var(--foreground);
+  border: 1px solid rgba(37, 40, 34, 0.2);
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.tag-icon {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  filter: brightness(0) invert(1);
 }
 
 .connect-panel {
@@ -759,6 +870,14 @@ a {
   color: var(--ink);
 }
 
+.exp-card:nth-child(odd) .exp-tag-icon {
+  filter: none;
+}
+
+.exp-card:nth-child(even) .exp-tag-icon {
+  filter: brightness(0) invert(1);
+}
+
 .exp-card-inner {
   display: grid;
   grid-template-columns: minmax(220px, 0.65fr) minmax(0, 1fr);
@@ -823,6 +942,9 @@ a {
 }
 
 .exp-tags li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   padding: 8px 14px;
   border: 1px solid var(--border);
   border-radius: 999px;
@@ -830,6 +952,13 @@ a {
   font-weight: 600;
   letter-spacing: 0.03em;
   color: var(--foreground);
+}
+
+.exp-tag-icon {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  filter: brightness(0) invert(1);
 }
 
 /* ── Work footer ticker ── */
@@ -1169,4 +1298,20 @@ a {
     max-width: 340px;
     order: -1;
   }
+}
+
+/* ── Page transition pixel overlay ── */
+.pixel-transition {
+  background-color: var(--pixel-color);
+  width: 100%;
+  height: 100%;
+}
+
+.page-transition-overlay {
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.page-transition-overlay.is-active {
+  opacity: 1;
 }

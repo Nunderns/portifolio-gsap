@@ -2,20 +2,49 @@
 
 import { useEffect, useRef } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 
 gsap.registerPlugin(ScrollTrigger);
 
+const tagIconMap: Record<string, string> = {
+  'Node.js': '/images/svg/node-fill-svgrepo-com.svg',
+  'Express': '/images/svg/express-svgrepo-com.svg',
+  'Nest.js': '/images/svg/nestjs-svgrepo-com.svg',
+  'NestJS': '/images/svg/nestjs-svgrepo-com.svg',
+  'PHP': '/images/svg/php-svgrepo-com.svg',
+  'Laravel': '/images/svg/laravel-svgrepo-com.svg',
+  'Python': '/images/svg/python-127-svgrepo-com.svg',
+  'FastAPI': '/images/svg/fastapi-svgrepo-com.svg',
+  'PostgreSQL': '/images/svg/postgresql-svgrepo-com.svg',
+  'Redis': '/images/svg/redis-svgrepo-com.svg',
+  'Next.js': '/images/svg/next-dot-js-svgrepo-com.svg',
+  'React': '/images/svg/react-svgrepo-com.svg',
+  'Vue.js': '/images/svg/react-svgrepo-com.svg',
+  'Tailwind CSS': '/images/svg/tailwind-css-svgrepo-com.svg',
+  'Shadcn UI': '/images/svg/shadcn-ui.svg',
+  'Docker': '/images/svg/docker-svgrepo-com.svg',
+  'GitHub Actions': '/images/svg/github-142-svgrepo-com.svg',
+  'MongoDB': '/images/svg/mongodb-svgrepo-com.svg',
+  'MySQL': '/images/svg/mysql-svgrepo-com.svg',
+  'AWS': '/images/svg/aws-svgrepo-com.svg',
+  'Git': '/images/svg/github-142-svgrepo-com.svg',
+  'TypeScript': '/images/svg/node-fill-svgrepo-com.svg',
+  'Golang': '/images/svg/node-fill-svgrepo-com.svg',
+  'LangChain': '/images/svg/node-fill-svgrepo-com.svg',
+  'CI/CD': '/images/svg/github-142-svgrepo-com.svg',
+};
+
 const experiences = [
   {
     company: 'Intellux',
     role: 'Fullstack Developer',
-    type: 'Remoto',
+    type: 'Autônomo',
     year: 'mai 2026 – presente',
     description: 'Desenvolvimento de aplicações SaaS escaláveis com arquitetura multi-tenant. APIs RESTful com TypeScript (Node.js) e Python. CI/CD com GitHub Actions, AWS, Docker. Colaboração com times de produto, frontend e operações.',
     tags: ['TypeScript', 'Node.js', 'Python', 'AWS', 'CI/CD', 'PostgreSQL', 'Docker'],
-    rotate: '-2deg',
+    rotate: '1.5deg',
   },
   {
     company: 'Coin Nodes',
@@ -23,7 +52,7 @@ const experiences = [
     type: 'Autônomo',
     year: 'fev 2026 – mai 2026',
     description: 'Desenvolvimento de APIs REST com Python (FastAPI) e Golang. Arquitetura modular em camadas, PostgreSQL, Redis, Alembic, Docker. Colaboração com times de Front-End, Produto e Design.',
-    tags: ['Python', 'FastAPI', 'Golang', 'PostgreSQL', 'Redis', 'Docker'],
+    tags: ['Python', 'FastAPI', 'Golang', 'PostgreSQL', 'Redis', 'Docker', 'Pydantic', 'SQLAlchemy'],
     rotate: '-2deg',
   },
   {
@@ -32,7 +61,7 @@ const experiences = [
     type: 'Temporário',
     year: 'dez 2025 – jan 2026',
     description: 'Desenvolvimento de APIs escaláveis com NestJS (Node.js + TypeScript). PostgreSQL, Redis, cache e filas. Colaboração com Front-End, decisões de arquitetura e boas práticas.',
-    tags: ['Node.js', 'TypeScript', 'NestJS', 'PostgreSQL', 'Redis'],
+    tags: ['Node.js', 'React-Native', 'NestJS', 'PostgreSQL', 'Redis', 'Prisma ORM', 'Expo Go'],
     rotate: '1.5deg',
   },
   {
@@ -197,7 +226,18 @@ export default function Work() {
                 <p className="exp-description">{exp.description}</p>
                 <ul className="exp-tags">
                   {exp.tags.map((tag) => (
-                    <li key={tag}>{tag}</li>
+                    <li key={tag}>
+                      {tagIconMap[tag] && (
+                        <Image 
+                          src={tagIconMap[tag]} 
+                          alt={tag} 
+                          width={16} 
+                          height={16}
+                          className="exp-tag-icon"
+                        />
+                      )}
+                      <span>{tag}</span>
+                    </li>
                   ))}
                 </ul>
               </div>
