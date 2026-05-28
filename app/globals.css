@@ -721,39 +721,52 @@ a {
   position: relative;
   width: clamp(200px, 26vw, 310px);
   min-height: 200px;
-  padding: 36px 28px 28px;
+  padding: 0;
   border-radius: 13px;
-  display: flex;
-  align-items: flex-end;
   cursor: default;
   box-shadow: 0 22px 60px rgba(0, 0, 0, 0.28), 0 8px 0 rgba(0,0,0,0.12);
   will-change: transform;
+  overflow: hidden;
 }
 
-.value-card p {
-  font-family: "Comic Sans MS", "Bradley Hand", cursive;
-  font-size: clamp(22px, 2.2vw, 32px);
+.value-card-image {
+  position: absolute;
+  inset: 0;
+  object-fit: cover;
+  z-index: 1;
+}
+
+.value-card-text {
+  position: absolute;
+  top: 20%;
+  left: 50px;
+  right: 10px;
+  z-index: 2;
   line-height: 0.95;
   letter-spacing: -0.02em;
-  position: relative;
-  z-index: 2;
+  margin: 0;
 }
 
-.value-card-tear {
-  position: absolute;
-  top: -2px;
-  left: 0;
-  right: 0;
-  height: 18px;
-  background: var(--background);
-  clip-path: polygon(
-    0% 100%, 3% 0%, 6% 80%, 9% 10%, 13% 90%, 17% 5%,
-    21% 75%, 25% 20%, 29% 85%, 33% 0%, 37% 70%,
-    41% 15%, 45% 88%, 49% 5%, 53% 78%, 57% 22%,
-    61% 92%, 65% 8%, 69% 72%, 73% 18%, 77% 85%,
-    81% 3%, 85% 68%, 89% 25%, 93% 80%, 97% 5%, 100% 100%
-  );
-  z-index: 3;
+.value-font-gochi {
+  font-family: var(--font-gochi-hand), "Comic Sans MS", cursive;
+  font-size: clamp(22px, 2.2vw, 32px);
+  color: rgb(23, 23, 23);
+}
+
+.value-font-serif {
+  font-family: "Awesome Serif", Georgia, "Times New Roman", serif;
+  font-size: clamp(20px, 2vw, 27px);
+  font-weight: 600;
+  font-style: italic;
+  line-height: 1.1em;
+  color: rgb(23, 23, 23);
+}
+
+.value-font-mono {
+  font-family: var(--font-geist-mono), monospace;
+  font-size: clamp(25px, 1.8vw, 20px);
+  line-height: 20px;
+  color: rgb(23, 23, 23);
 }
 
 /* ── Work page ── */

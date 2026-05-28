@@ -37,9 +37,30 @@ const skills = [
 ];
 
 const values = [
-  { label: 'perseguir incansavelmente a clareza.', rotate: '-4deg', color: '#efe1ca', textColor: '#252822' },
-  { label: 'projetar para momentos.', rotate: '3deg', color: '#f2a65a', textColor: '#252822' },
-  { label: 'o software deve empoderar.', rotate: '10deg', color: '#252822', textColor: '#f2e3cf' },
+  { 
+    label: 'perseguir incansavelmente a clareza.', 
+    rotate: '-4deg', 
+    color: '#efe1ca', 
+    textColor: '#252822',
+    font: 'mono',
+    image: '/images/notes-pages/0aKOwaR29QHg04I7MHlsi9j1g4.webp'
+  },
+  { 
+    label: 'projetar para momentos.', 
+    rotate: '3deg', 
+    color: '#f2a65a', 
+    textColor: '#252822',
+    font: 'serif',
+    image: '/images/notes-pages/m0nSd9OmKrRp1nvRHVH89tLs0mg.webp'
+  },
+  { 
+    label: 'o software deve empoderar.', 
+    rotate: '10deg', 
+    color: '#252822', 
+    textColor: '#f2e3cf',
+    font: 'gochi',
+    image: '/images/notes-pages/rhT0iPheLHJdGQAZ04lGqNb0I.webp'
+  },
 ];
 
 const LOOK_FOR_ITEMS = [
@@ -470,13 +491,16 @@ export default function Home() {
               className="value-card"
               key={i}
               style={{
-                background: v.color,
-                color: v.textColor,
                 transform: `rotate(${v.rotate}) perspective(1200px)`,
               }}
             >
-              <div className="value-card-tear" />
-              <p>{v.label}</p>
+              <Image 
+                src={v.image} 
+                alt={v.label}
+                fill
+                className="value-card-image"
+              />
+              <p className={`value-card-text value-font-${v.font}`}>{v.label}</p>
             </div>
           ))}
         </div>
