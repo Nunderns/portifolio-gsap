@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import Pochita3D from '@/components/Pochita3D';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -163,13 +164,7 @@ export default function Home() {
       // ── 4. Intro paragraph
       gsap.from('.intro', { opacity: 0, y: 22, duration: 0.8, delay: 1.1, ease: 'power3.out' });
 
-      // ── 5. Face card elastic entrance
-      gsap.from('.face-card', {
-        opacity: 0, scale: 0.88, rotate: -6,
-        duration: 1.2, delay: 0.3, ease: 'elastic.out(1, 0.7)',
-      });
-
-      // ── 6. Floating orbits loop
+      // ── 5. Floating orbits loop
       gsap.to('.orbit-one', { y: -16, rotate: 6, duration: 2.8, repeat: -1, yoyo: true, ease: 'sine.inOut' });
       gsap.to('.orbit-two', { y: 14, rotate: -5, duration: 3.4, repeat: -1, yoyo: true, ease: 'sine.inOut', delay: 0.6 });
 
@@ -460,11 +455,7 @@ export default function Home() {
         <div className="portrait-zone">
           <div className="floating-orbit orbit-one">Backend</div>
           <div className="floating-orbit orbit-two">Frontend</div>
-          <div className="face-card">
-            <span className="face-eye left" />
-            <span className="face-eye right" />
-            <span className="face-smile" />
-          </div>
+          <Pochita3D />
           <div className="book-strip" />
         </div>
       </section>
