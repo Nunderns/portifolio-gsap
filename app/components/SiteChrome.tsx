@@ -21,8 +21,17 @@ export default function SiteChrome() {
   // ── Lenis smooth scroll synced with ScrollTrigger
   useEffect(() => {
     if (prefersReducedMotion()) return;
-    const lenis = new Lenis({ lerp: 0.1, anchors: true });
+    const lenis = new Lenis({ lerp: 0.1, anchors: { offset: -84 } });
     lenisRef.current = lenis;
+
+    // Same-page hash links: stop the native / Next.js jump so Lenis can glide there.
+    const onAnchorClick = (e: MouseEvent) => {
+      const link = (e.target as Element | null)?.closest?.('a[href*="#"]') as HTMLAnchorElement | null;
+      if (!link) return;
+      const url = new URL(link.href);
+      if (url.host === location.host && url.pathname === location.pathname && url.hash) e.preventDefault();
+    };
+    window.addEventListener('click', onAnchorClick, true);
     lenis.on('scroll', ScrollTrigger.update);
     const tick = (time: number) => lenis.raf(time * 1000);
     gsap.ticker.add(tick);
@@ -36,6 +45,7 @@ export default function SiteChrome() {
 
     return () => {
       offReady();
+      window.removeEventListener('click', onAnchorClick, true);
       gsap.ticker.remove(tick);
       lenis.destroy();
       lenisRef.current = null;
