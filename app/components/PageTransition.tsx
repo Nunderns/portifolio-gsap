@@ -1,8 +1,9 @@
 'use client';
 
-import { createContext, useContext, useEffect, useRef, useState } from 'react';
+import { createContext, useContext, useLayoutEffect, useRef, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import gsap from 'gsap';
+import { setSiteReady } from '@/app/lib/siteReady';
 
 const TransitionContext = createContext<{ isPageVisible: boolean }>({
   isPageVisible: false,
@@ -13,8 +14,10 @@ export const useTransition = () => useContext(TransitionContext);
 export default function PageTransition({ children }: { children: React.ReactNode }) {
   const overlayRef = useRef<HTMLDivElement>(null);
   const [isAnimating, setIsAnimating] = useState(false);
-  const [isPageVisible, setIsPageVisible] = useState(false);
+  const [isPageVisible, setIsPageVisible] = useState(true);
   const pathname = usePathname();
+  // The intro loader covers the first paint; the pixel transition only runs on navigation.
+  const prevPathname = useRef(pathname);
 
   const runAnimation = () => {
     const overlay = overlayRef.current;
@@ -65,6 +68,10 @@ export default function PageTransition({ children }: { children: React.ReactNode
       duration: 0.4,
     })
     // Phase 3: Reveal page by removing pixels
+    .call(() => {
+      setIsPageVisible(true);
+      setSiteReady(true);
+    })
     .to(
       pixels,
       {
@@ -79,11 +86,16 @@ export default function PageTransition({ children }: { children: React.ReactNode
     return tl;
   };
 
-  useEffect(() => {
+  // Layout effect so the site is marked "not ready" before the new page's intro effects run.
+  useLayoutEffect(() => {
+    if (prevPathname.current === pathname) return;
+    prevPathname.current = pathname;
+    setSiteReady(false);
     const tl = runAnimation();
 
     return () => {
       if (tl) tl.kill();
+      setSiteReady(true);
     };
   }, [pathname]); // Re-run animation when pathname changes
 

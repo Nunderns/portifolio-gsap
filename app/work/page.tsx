@@ -5,6 +5,8 @@ import Link from 'next/link';
 import Image from 'next/image';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { useSiteMotion } from '@/app/lib/useSiteMotion';
+import { prefersReducedMotion, whenSiteReady } from '@/app/lib/siteReady';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -93,7 +95,7 @@ const experiences = [
   },
 ];
 
-const TICKER_TEXT = 'Node.js · TypeScript · React · PostgreSQL · MongoDB · Docker · REST APIs · Next.js · Git · Testing · Cloud ·\u00A0';
+const TICKER_ITEMS = ['Node.js', 'TypeScript', 'React', 'PostgreSQL', 'MongoDB', 'Docker', 'REST APIs', 'Next.js', 'Git', 'Testing', 'Cloud'];
 
 function spawnClickBurst(x: number, y: number) {
   const count = 8;
@@ -124,53 +126,49 @@ function spawnClickBurst(x: number, y: number) {
 export default function Work() {
   const rootRef = useRef<HTMLElement>(null);
 
-  useEffect(() => {
-    const ctx = gsap.context(() => {
-      // ── Header entrance
-      gsap.from('.work-page-label', { opacity: 0, y: 20, duration: 0.6, ease: 'power3.out' });
-      gsap.from('.work-page-title .wchar', {
-        opacity: 0, y: 50, rotate: () => gsap.utils.random(-14, 14),
-        duration: 0.55, stagger: 0.04, ease: 'back.out(1.6)', delay: 0.15,
-      });
-      gsap.from('.work-page-sub', { opacity: 0, y: 18, duration: 0.7, delay: 0.7, ease: 'power3.out' });
+  useSiteMotion(rootRef);
 
-      // ── Back link
-      gsap.from('.work-back', { opacity: 0, x: -18, duration: 0.5, delay: 0.1, ease: 'power2.out' });
+  useEffect(() => {
+    let offReady = () => {};
+    const ctx = gsap.context(() => {
+      if (prefersReducedMotion()) return;
+
+      // ── Header intro — waits for the loader / page transition
+      const lines = gsap.utils.toArray<HTMLElement>('.work-line');
+      const fades = gsap.utils.toArray<HTMLElement>('[data-hero-fade]');
+      gsap.set(lines, { yPercent: 115, rotate: 3 });
+      gsap.set(fades, { y: 26, opacity: 0 });
+
+      const intro = gsap.timeline({ paused: true, defaults: { ease: 'power4.out' } })
+        .to(lines, { yPercent: 0, rotate: 0, duration: 1.15, stagger: 0.12 }, 0.05)
+        .to(fades, { y: 0, opacity: 1, duration: 0.9, stagger: 0.08 }, 0.3);
+      offReady = whenSiteReady(() => intro.play());
+
+      // ── Header drifts away on scroll
+      gsap.to('.work-header', {
+        yPercent: -18, opacity: 0.2, ease: 'none',
+        scrollTrigger: { trigger: '.work-header', start: 'top top', end: 'bottom top', scrub: true },
+      });
 
       // ── Experience cards scroll reveal
-      gsap.utils.toArray<HTMLElement>('.exp-card').forEach((card, i) => {
+      gsap.utils.toArray<HTMLElement>('.exp-card').forEach((card) => {
         gsap.from(card, {
           opacity: 0,
-          y: 70,
-          rotate: parseFloat(card.dataset.rotate ?? '0') * -1,
-          duration: 0.85,
+          y: 90,
+          scale: 0.96,
+          rotate: parseFloat(card.dataset.rotate ?? '0') * -2,
+          duration: 1,
           ease: 'power3.out',
-          scrollTrigger: { trigger: card, start: 'top 82%', toggleActions: 'play none none reverse' },
-          delay: i * 0.05,
+          scrollTrigger: { trigger: card, start: 'top 92%', once: true },
         });
       });
-
-      // ── Ticker infinite scroll
-      const ticker = document.querySelector<HTMLElement>('.work-ticker-inner');
-      if (ticker) {
-        const clone = ticker.cloneNode(true) as HTMLElement;
-        ticker.parentElement?.appendChild(clone);
-        gsap.to([ticker, clone], {
-          x: `-=${ticker.scrollWidth}`,
-          duration: 22,
-          repeat: -1,
-          ease: 'none',
-          modifiers: {
-            x: gsap.utils.unitize(gsap.utils.wrap(-ticker.scrollWidth, 0)),
-          },
-        });
-      }
     }, rootRef);
 
     const handleClick = (e: MouseEvent) => spawnClickBurst(e.clientX, e.clientY);
     window.addEventListener('click', handleClick);
 
     return () => {
+      offReady();
       ctx.revert();
       window.removeEventListener('click', handleClick);
     };
@@ -181,27 +179,16 @@ export default function Work() {
       <div className="noise-layer" />
 
       {/* ── Back nav ── */}
-      <Link href="/" className="work-back">← voltar ao início</Link>
+      <Link href="/" className="work-back" data-hero-fade data-magnetic="0.3">← voltar ao início</Link>
 
       {/* ── Header ── */}
       <header className="work-header">
-        <p className="work-page-label">portfólio / trabalho</p>
+        <p className="work-page-label" data-hero-fade>portfólio / trabalho</p>
         <h1 className="work-page-title" aria-label="Trabalhos Selecionados">
-          <>
-            {'Trabalhos'.split('').map((ch, i) => (
-              <span className="wchar" key={`line1-${i}`} style={{ display: 'inline-block', whiteSpace: ch === ' ' ? 'pre' : 'normal' }}>
-                {ch === ' ' ? '\u00A0' : ch}
-              </span>
-            ))}
-            <br />
-            {'Selecionados'.split('').map((ch, i) => (
-              <span className="wchar" key={`line2-${i}`} style={{ display: 'inline-block', whiteSpace: ch === ' ' ? 'pre' : 'normal' }}>
-                {ch === ' ' ? '\u00A0' : ch}
-              </span>
-            ))}
-          </>
+          <span className="line-mask" aria-hidden="true"><span className="work-line">Trabalhos</span></span>
+          <span className="line-mask" aria-hidden="true"><span className="work-line">Selecionados</span></span>
         </h1>
-        <p className="work-page-sub">
+        <p className="work-page-sub" data-hero-fade>
           Uma coleção de papéis, projetos e sistemas que construí como desenvolvedor fullstack com foco em backend.
         </p>
       </header>
@@ -213,20 +200,21 @@ export default function Work() {
             className="exp-card"
             key={i}
             data-rotate={exp.rotate}
+            data-tilt3d="3"
             style={{ transform: `rotate(${exp.rotate})` }}
           >
             <div className="exp-card-inner">
               <div className="exp-meta">
                 <p className="exp-type">{exp.type}</p>
-                <h2 className="exp-company">{exp.company}</h2>
+                <h2 className="exp-company" data-split="chars">{exp.company}</h2>
                 <p className="exp-role">{exp.role}</p>
                 <p className="exp-year">{exp.year}</p>
               </div>
               <div className="exp-body">
                 <p className="exp-description">{exp.description}</p>
-                <ul className="exp-tags">
+                <ul className="exp-tags" data-reveal-group>
                   {exp.tags.map((tag) => (
-                    <li key={tag}>
+                    <li key={tag} data-reveal-item>
                       {tagIconMap[tag] && (
                         <Image 
                           src={tagIconMap[tag]} 
@@ -248,12 +236,18 @@ export default function Work() {
 
       {/* ── Ticker footer ── */}
       <footer className="work-footer">
-        <div className="work-ticker-wrap">
-          <span className="ticker-note">🎵</span>
-          <div className="work-ticker-track">
-            <span className="work-ticker-inner">{TICKER_TEXT}</span>
+        <div className="work-ticker-wrap" data-marquee="26" aria-hidden="true">
+          <div className="marquee-track" data-marquee-track>
+            {[0, 1].map((copy) => (
+              <div className="marquee-group" key={copy}>
+                {[...TICKER_ITEMS, ...TICKER_ITEMS].map((item, i) => (
+                  <span className="work-ticker-item" key={i}>
+                    {item}<span className="marquee-star">✦</span>
+                  </span>
+                ))}
+              </div>
+            ))}
           </div>
-          <span className="ticker-note">🎵</span>
         </div>
         <p className="work-footer-credit">Henri Okayama · Desenvolvedor Backend / Fullstack</p>
       </footer>
