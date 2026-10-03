@@ -12,7 +12,7 @@ function PochitaModel() {
   return <primitive ref={meshRef} object={scene} scale={1.2} />;
 }
 
-export default function Pochita3D() {
+export default function Pochita3D({ fill = false }: { fill?: boolean }) {
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
@@ -25,13 +25,13 @@ export default function Pochita3D() {
   }, []);
 
   return (
-    <div style={{ width: isMobile ? '200px' : '500px', height: isMobile ? '200px' : '500px' }}>
+    <div style={fill ? { width: '100%', height: '100%' } : { width: isMobile ? '200px' : '500px', height: isMobile ? '200px' : '500px' }}>
       <Canvas camera={{ position: [0, 0, 3], fov: 100 }}>
         <ambientLight intensity={0.6} />
         <directionalLight position={[5, 5, 5]} intensity={0.8} />
         <OrbitControls
-          enableZoom={!isMobile}
-          enablePan={!isMobile}
+          enableZoom={!isMobile && !fill}
+          enablePan={!isMobile && !fill}
           enableRotate={!isMobile}
           autoRotate={true}
           autoRotateSpeed={2.0}

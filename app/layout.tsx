@@ -5,6 +5,7 @@ import "./globals.css";
 import PageTransition from "./components/PageTransition";
 import SiteLoader from "./components/SiteLoader";
 import SiteChrome from "./components/SiteChrome";
+import NotebookNav from "./components/NotebookNav";
 import "lenis/dist/lenis.css";
 
 const geistSans = Geist({
@@ -42,6 +43,7 @@ export default function RootLayout({
       <body>
         <SiteLoader />
         <SiteChrome />
+        <NotebookNav />
         <PageTransition>{children}</PageTransition>
       </body>
     </html>

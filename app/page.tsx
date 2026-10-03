@@ -4,13 +4,25 @@ import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { DrawSVGPlugin } from 'gsap/DrawSVGPlugin';
 import Pochita3D from '@/components/Pochita3D';
 import { useSiteMotion } from '@/app/lib/useSiteMotion';
 import { hasFinePointer, prefersReducedMotion, whenSiteReady } from '@/app/lib/siteReady';
 
-gsap.registerPlugin(ScrollTrigger);
+gsap.registerPlugin(ScrollTrigger, DrawSVGPlugin);
 
 const MARQUEE_ITEMS = ['Backend', 'APIs REST', 'Fullstack', 'Node.js', 'Arquitetura', 'Next.js', 'PostgreSQL', 'Docker'];
+const TOC = [
+  { id: 'about', label: 'sobre mim', page: '02' },
+  { id: 'beliefs', label: 'crenças', page: '03' },
+  { id: 'stack', label: 'stack', page: '04' },
+  { id: 'work', label: 'trabalho', page: '05' },
+  { id: 'projects', label: 'projetos', page: '06' },
+  { id: 'connect', label: 'contato', page: '07' },
+];
+
+const SPINE_RINGS = Array.from({ length: 13 });
+
 const FOOTER_MARQUEE = ['vamos conversar', 'henri.okayama@gmail.com', 'disponível para projetos'];
 
 const tagIconMap: Record<string, string> = {
@@ -153,52 +165,69 @@ export default function Home() {
     const fine = hasFinePointer();
     let offReady = () => {};
     const navCleanups: (() => void)[] = [];
+    let mm: gsap.MatchMedia | null = null;
 
     const ctx = gsap.context(() => {
       if (reduced) return;
 
-      // ── 1. Hero intro — waits for the loader / page transition to uncover the screen
-      const lines = gsap.utils.toArray<HTMLElement>('.hero-line');
-      const fades = gsap.utils.toArray<HTMLElement>('[data-hero-fade]');
-      gsap.set(lines, { yPercent: 115, rotate: 3 });
-      gsap.set(fades, { y: 26, opacity: 0 });
-      gsap.set('[data-hero-visual]', { opacity: 0, scale: 1.06 });
-      gsap.set('.topbar', { y: -30, opacity: 0 });
+      // ── 1. Notebook drops onto the desk once the loader is gone
+      gsap.set('.book-drop', { y: 160, rotate: -10, opacity: 0 });
+      gsap.set('.book-hint', { opacity: 0, y: 16 });
+      const drop = gsap.timeline({ paused: true })
+        .to('.book-drop', { y: 0, rotate: 0, opacity: 1, duration: 1.4, ease: 'expo.out' })
+        .to('.book-hint', { opacity: 1, y: 0, duration: 0.8, ease: 'power3.out' }, 0.7);
+      offReady = whenSiteReady(() => drop.play());
+      gsap.to('.book-hint-arrow', { y: 6, duration: 0.8, repeat: -1, yoyo: true, ease: 'sine.inOut' });
 
-      const intro = gsap.timeline({ paused: true, defaults: { ease: 'power4.out' } })
-        .to('.topbar', { y: 0, opacity: 1, duration: 1, ease: 'power3.out' }, 0)
-        .to(lines, { yPercent: 0, rotate: 0, duration: 1.15, stagger: 0.1 }, 0.05)
-        .to(fades, { y: 0, opacity: 1, duration: 0.9, stagger: 0.08 }, 0.45)
-        .to('[data-hero-visual]', { opacity: 1, scale: 1, duration: 1.4, ease: 'expo.out' }, 0.6);
-      offReady = whenSiteReady(() => intro.play());
+      // ── 2. Scroll opens the notebook: elastic off, cover flips, chapter page flips, hero writes itself
+      mm = gsap.matchMedia();
+      mm.add({ desktop: '(min-width: 769px)', mobile: '(max-width: 768px)' }, (c) => {
+        const desktop = !!c.conditions?.desktop;
+        const lines = gsap.utils.toArray<HTMLElement>('.hero-line');
 
-      // ── 2. Hero scroll-out: copy drifts up & fades, Pochita sinks (desktop)
-      const mm = gsap.matchMedia();
-      mm.add('(min-width: 1024px)', () => {
-        gsap.to('[data-hero-copy]', {
-          yPercent: -10, opacity: 0.15, ease: 'none',
-          scrollTrigger: { trigger: '.hero-stage', start: 'top top', end: 'bottom 30%', scrub: true },
+        gsap.set('.book-leaf', { transformOrigin: '0% 50%' });
+        gsap.set('.book', { xPercent: desktop ? -25 : 0, rotate: -3, scale: desktop ? 0.92 : 0.96 });
+
+        const flip = (tl: gsap.core.Timeline, leaf: string, at: number, zAfter: number) => {
+          tl.to(leaf, { rotationY: -180, duration: 1.2, ease: 'power2.inOut' }, at)
+            .fromTo(`${leaf} .leaf-front .leaf-shade`, { opacity: 0 }, { opacity: 0.45, duration: 0.6, ease: 'power1.in' }, at)
+            .fromTo(`${leaf} .leaf-back .leaf-shade`, { opacity: 0.45 }, { opacity: 0, duration: 0.6, ease: 'power1.out' }, at + 0.6)
+            .set(leaf, { zIndex: zAfter }, at + 0.6);
+          if (!desktop) tl.to(leaf, { autoAlpha: 0, duration: 0.25 }, at + 1);
+        };
+
+        const tl = gsap.timeline({
+          defaults: { ease: 'none' },
+          scrollTrigger: {
+            trigger: '.book-intro',
+            start: 'top top',
+            end: '+=280%',
+            pin: true,
+            scrub: 1,
+            anticipatePin: 1,
+            invalidateOnRefresh: true,
+            refreshPriority: 1,
+          },
         });
-        gsap.to('.portrait-zone', {
-          yPercent: 12, ease: 'none',
-          scrollTrigger: { trigger: '.hero-stage', start: 'top top', end: 'bottom top', scrub: true },
-        });
+
+        tl.to('.book-hint', { opacity: 0, y: 24, duration: 0.3 }, 0)
+          .to('.cover-elastic', { xPercent: 220, rotate: 8, opacity: 0, duration: 0.45, ease: 'power2.in' }, 0)
+          .to('.book', { xPercent: 0, rotate: 0, scale: 1, duration: 1.4, ease: 'power2.inOut' }, 0.3);
+        flip(tl, '.leaf-1', 0.4, 5);
+        flip(tl, '.leaf-2', 1.7, 6);
+        tl.fromTo(lines, { yPercent: 115, rotate: 3 }, { yPercent: 0, rotate: 0, duration: 0.7, stagger: 0.12, ease: 'power3.out' }, 2.5)
+          .fromTo('[data-page-in]', { y: 18, opacity: 0 }, { y: 0, opacity: 1, duration: 0.55, stagger: 0.1, ease: 'power2.out' }, 2.75)
+          .fromTo('.role-underline path', { drawSVG: '0%' }, { drawSVG: '100%', duration: 0.6, ease: 'power2.inOut' }, 2.9)
+          .fromTo('.toc-list li', { x: -14, opacity: 0 }, { x: 0, opacity: 1, duration: 0.4, stagger: 0.06 }, 2.6)
+          .to('.book', { scale: desktop ? 1.03 : 1, duration: 0.9 }, 3.4);
       });
-
-      // ── 3. Scroll hint pulse
-      gsap.to('.scroll-dot', { scale: 1.6, opacity: 0.45, duration: 0.9, yoyo: true, repeat: -1, ease: 'sine.inOut' });
-      gsap.fromTo('.scroll-line', { scaleX: 0.2 }, { scaleX: 1, duration: 1.4, yoyo: true, repeat: -1, ease: 'sine.inOut' });
-
-      // ── 4. Floating orbits loop
-      gsap.to('.orbit-one', { y: -16, rotate: 6, duration: 2.8, repeat: -1, yoyo: true, ease: 'sine.inOut' });
-      gsap.to('.orbit-two', { y: 14, rotate: -5, duration: 3.4, repeat: -1, yoyo: true, ease: 'sine.inOut', delay: 0.6 });
 
       // ── 5. Panels scroll reveal
       gsap.utils.toArray<HTMLElement>('[data-panel]').forEach((panel) => {
         gsap.from(panel, {
-          opacity: 0, y: 80, scale: 0.97,
+          opacity: 0, y: 90, rotationX: -22, transformOrigin: '50% 0%', transformPerspective: 1400,
           rotate: panel.dataset.tilt === 'right' ? 1.8 : -1.8,
-          duration: 1.1, ease: 'power3.out',
+          duration: 1.2, ease: 'power3.out',
           scrollTrigger: { trigger: panel, start: 'top 92%', once: true },
         });
       });
@@ -273,116 +302,13 @@ export default function Home() {
       }
     }, rootRef);
 
-    // ── Nav face travels to hovered link (outside ctx so listeners survive revert)
-    const face = document.querySelector<HTMLElement>('.nav-face');
-
-    if (face) {
-      // Snapshot every item's deco images so we can hard-reset others on enter
-      const items = Array.from(document.querySelectorAll<HTMLElement>('.nav-link-item'));
-      const allDecoSets = items.map(it => Array.from(it.querySelectorAll<HTMLElement>('.nav-deco-img')));
-      const allOvals    = items.map(it => it.querySelector<HTMLElement>('.nav-oval'));
-
-      const SIDE_GAP = 14;
-      const TOP_GAP  = 8;
-      const firstLink = items[0]?.querySelector<HTMLElement>('a');
-
-      // Face natural rect (BEFORE any GSAP transform). Recomputed when layout changes.
-      let faceNaturalRect = face.getBoundingClientRect();
-      let faceNaturalCentreX = faceNaturalRect.left + faceNaturalRect.width  / 2;
-      let faceNaturalCentreY = faceNaturalRect.top  + faceNaturalRect.height / 2;
-      let home = { x: 0, y: 0 };
-
-      const restPos = (link: HTMLElement) => {
-        const lr = link.getBoundingClientRect();
-        return {
-          x: (lr.left - SIDE_GAP) - faceNaturalRect.right,
-          y: (lr.top + lr.height / 2) - faceNaturalCentreY,
-        };
-      };
-
-      const hoverPos = (link: HTMLElement) => {
-        const lr = link.getBoundingClientRect();
-        return {
-          x: (lr.left + lr.width / 2) - faceNaturalCentreX,
-          y: (lr.top - TOP_GAP - faceNaturalRect.height) - faceNaturalRect.top,
-        };
-      };
-
-      // Reset face transform to read its true natural rect, then compute home and snap face there.
-      const recomputeHome = () => {
-        if (!firstLink) return;
-        gsap.set(face, { x: 0, y: 0 });
-        faceNaturalRect = face.getBoundingClientRect();
-        faceNaturalCentreX = faceNaturalRect.left + faceNaturalRect.width  / 2;
-        faceNaturalCentreY = faceNaturalRect.top  + faceNaturalRect.height / 2;
-        home = restPos(firstLink);
-        gsap.set(face, { x: home.x, y: home.y });
-      };
-
-      // Initial position: defer until layout settles (fonts, hydration, images).
-      // Fixes face appearing at wrong location after client-side route transitions.
-      requestAnimationFrame(() => recomputeHome());
-      document.fonts?.ready.then(() => recomputeHome()).catch(() => {});
-
-      // Recompute on resize so layout shifts don't break alignment
-      const onResize = () => recomputeHome();
-      window.addEventListener('resize', onResize);
-      navCleanups.push(() => window.removeEventListener('resize', onResize));
-
-      items.forEach((item, idx) => {
-        const oval   = allOvals[idx];
-        const decos  = allDecoSets[idx];
-        const link   = item.querySelector<HTMLElement>('a');
-
-        const onEnter = () => {
-          if (!link) return;
-
-          // hard-reset OTHER items so no stale animations remain
-          allDecoSets.forEach((set, i) => {
-            if (i === idx) return;
-            gsap.killTweensOf(set);
-            gsap.set(set, { opacity: 0, y: 0, scale: 1 });
-            const o = allOvals[i];
-            if (o) { gsap.killTweensOf(o); gsap.set(o, { opacity: 0, scale: 0.6 }); }
-          });
-
-          // face travels to sit CENTRED ABOVE the hovered link
-          const target = hoverPos(link);
-          gsap.to(face, { x: target.x, y: target.y, duration: 0.42, ease: 'back.out(1.5)', overwrite: true });
-
-          if (oval) gsap.to(oval, { scale: 1, opacity: 1, duration: 0.26, ease: 'back.out(1.8)', overwrite: true });
-          if (decos.length) {
-            gsap.killTweensOf(decos);
-            gsap.fromTo(decos,
-              { y: 18, opacity: 0, scale: 0.85 },
-              { y: 0, opacity: 1, scale: 1, stagger: 0.07, duration: 0.42, ease: 'back.out(1.6)', overwrite: true });
-          }
-        };
-
-        const onLeave = () => {
-          gsap.to(face, { x: home.x, y: home.y, duration: 0.55, delay: 0.2, ease: 'back.inOut(1.4)', overwrite: true });
-          if (oval) gsap.to(oval, { scale: 0.6, opacity: 0, duration: 0.16, overwrite: true });
-          if (decos.length) {
-            gsap.killTweensOf(decos);
-            gsap.to(decos, { opacity: 0, y: -10, duration: 0.2, stagger: 0.04, overwrite: true });
-          }
-        };
-
-        item.addEventListener('mouseenter', onEnter);
-        item.addEventListener('mouseleave', onLeave);
-        navCleanups.push(() => {
-          item.removeEventListener('mouseenter', onEnter);
-          item.removeEventListener('mouseleave', onLeave);
-        });
-      });
-    }
-
     // ── Mouse click burst
     const handleClick = (e: MouseEvent) => spawnClickBurst(e.clientX, e.clientY);
     window.addEventListener('click', handleClick);
 
     return () => {
       offReady();
+      mm?.revert();
       ctx.revert();
       navCleanups.forEach(fn => fn());
       window.removeEventListener('click', handleClick);
@@ -407,12 +333,142 @@ export default function Home() {
     <main ref={rootRef} className="site-shell">
       <div className="noise-layer" />
 
-      {/* ── Amuleto stamp (top-right fixed) ── */}
-      <div className="amuleto-wrap" aria-hidden="true">
-        <Image src="/images/amuleto.png" alt="" width={72} height={118} priority />
-      </div>
+      {/* ── Notebook intro — the closed notebook opens as you scroll ── */}
+      <section className="book-intro" id="home">
+        <div className="book-scene">
+          <div className="book-drop">
+            <div className="book">
+              <div className="book-board" aria-hidden="true" />
 
-      {/* ── Side decorative images — absolute, scattered across page ── */}
+              {/* Right page — the hero */}
+              <div className="book-page book-right">
+                <div className="page-inner page-paper">
+                  <p className="page-eyebrow" data-page-in>backend / desenvolvedor fullstack</p>
+                  <h1 className="page-title" aria-label="Olá, sou Henri Okayama.">
+                    <span className="line-mask" aria-hidden="true"><span className="hero-line">Olá, sou</span></span>
+                    <span className="line-mask" aria-hidden="true"><span className="hero-line">Henri Okayama.</span></span>
+                  </h1>
+                  <p className="page-role" aria-label="Desenvolvedor Fullstack">
+                    <span className="line-mask" aria-hidden="true"><span className="hero-line">Desenvolvedor Fullstack</span></span>
+                    <svg className="role-underline" viewBox="0 0 300 16" preserveAspectRatio="none" aria-hidden="true">
+                      <path d="M3 11 C 60 3, 120 14, 180 7 S 260 4, 297 9" />
+                    </svg>
+                  </p>
+                  <p className="page-intro" data-page-in>
+                    Construo sistemas web confiáveis que ajudam produtos a se moverem mais rápido — com arquitetura backend pensada e execução fullstack limpa.
+                  </p>
+                  <div className="page-actions" data-page-in>
+                    <a className="hero-cta" href="#projects">ver projetos <span className="hero-cta-arrow" aria-hidden="true">↗</span></a>
+                    <a className="hero-cta is-ghost" href="#connect">contato</a>
+                  </div>
+                  <span className="page-number">p. 01</span>
+                </div>
+                <div className="page-pochita" data-page-in>
+                  <Pochita3D fill />
+                </div>
+              </div>
+
+              {/* Leaf 2 — chapter page (front) / table of contents (back, ends on the left) */}
+              <div className="book-leaf leaf-2">
+                <div className="leaf-face leaf-front">
+                  <div className="face-body page-paper chapter-page">
+                  <span className="chapter-kicker">capítulo 01</span>
+                  <p className="chapter-title">olá,<br />mundo.</p>
+                  <p className="chapter-sub">notas, sistemas e rabiscos de um dev backend.</p>
+                  <div className="chapter-doodle" aria-hidden="true">
+                    <Image src="/images/flower.avif" alt="" fill sizes="160px" style={{ objectFit: 'contain' }} />
+                  </div>
+                  </div>
+                  <span className="leaf-shade" />
+                </div>
+                <div className="leaf-face leaf-back">
+                  <div className="face-body page-paper toc-sheet">
+                  <p className="toc-title">sumário</p>
+                  <ol className="toc-list">
+                    {TOC.map((item, i) => (
+                      <li key={item.id}>
+                        <a href={`#${item.id}`}>
+                          <span className="toc-num">{String(i + 1).padStart(2, '0')}</span>
+                          <span className="toc-label">{item.label}</span>
+                          <span className="toc-dots" aria-hidden="true" />
+                          <span className="toc-page">p. {item.page}</span>
+                        </a>
+                      </li>
+                    ))}
+                  </ol>
+                  <p className="toc-note">✎ continue rolando para folhear</p>
+                  <div className="toc-doodle" aria-hidden="true">
+                    <Image src="/images/ramen.avif" alt="" fill sizes="120px" style={{ objectFit: 'contain' }} />
+                  </div>
+                  <span className="page-number is-left">p. 00</span>
+                  </div>
+                  <span className="leaf-shade" />
+                </div>
+              </div>
+
+              {/* Leaf 1 — the cover (front) / inside cover (back) */}
+              <div className="book-leaf leaf-1">
+                <div className="leaf-face leaf-front">
+                  <div className="face-body book-cover">
+                  <span className="cover-corner is-tl" />
+                  <span className="cover-corner is-bl" />
+                  <span className="cover-corner is-tr" />
+                  <span className="cover-corner is-br" />
+                  <div className="cover-label">
+                    <span className="cover-label-kicker">caderno nº 01</span>
+                    <strong>Henri Okayama</strong>
+                    <span>desenvolvedor fullstack</span>
+                    <span className="cover-label-rule" />
+                    <span className="cover-label-year">portfólio · 2026</span>
+                  </div>
+                  <div className="cover-sticker is-1" aria-hidden="true">
+                    <Image src="/images/gundam.avif" alt="" fill sizes="120px" style={{ objectFit: 'contain' }} />
+                  </div>
+                  <div className="cover-sticker is-2" aria-hidden="true">
+                    <Image src="/images/maneki-neko.avif" alt="" fill sizes="120px" style={{ objectFit: 'contain' }} />
+                  </div>
+                  <div className="cover-sticker is-3" aria-hidden="true">
+                    <Image src="/images/toucan.avif" alt="" fill sizes="120px" style={{ objectFit: 'contain' }} />
+                  </div>
+                  <span className="cover-elastic" aria-hidden="true" />
+                  </div>
+                  <span className="leaf-shade" />
+                </div>
+                <div className="leaf-face leaf-back">
+                  <div className="face-body book-inside">
+                  <p className="inside-kicker">este caderno pertence a:</p>
+                  <p className="inside-name">Henri Okayama</p>
+                  <p className="inside-note">se encontrado, por favor devolver →<br />henri.okayama@gmail.com</p>
+                  <div className="inside-amuleto" aria-hidden="true">
+                    <span className="tape" />
+                    <Image src="/images/amuleto.png" alt="" fill sizes="90px" style={{ objectFit: 'contain' }} />
+                  </div>
+                  <figure className="inside-polaroid" aria-hidden="true">
+                    <span className="tape" />
+                    <div className="inside-polaroid-img">
+                      <Image src="/images/bunny_face.avif" alt="" fill sizes="140px" style={{ objectFit: 'cover' }} />
+                    </div>
+                    <figcaption>eu, debugando</figcaption>
+                  </figure>
+                  </div>
+                  <span className="leaf-shade" />
+                </div>
+              </div>
+
+              <div className="book-spine" aria-hidden="true">
+                {SPINE_RINGS.map((_, i) => <span key={i} />)}
+              </div>
+            </div>
+          </div>
+
+          <p className="book-hint" aria-hidden="true">
+            role para abrir o caderno <span className="book-hint-arrow">↓</span>
+          </p>
+        </div>
+      </section>
+
+      {/* ── Side decorative images — scattered along the pages below the notebook ── */}
+      <div className="side-img-layer" aria-hidden="true">
       {sideImages.map((img, i) => (
         <div
           key={i}
@@ -431,103 +487,7 @@ export default function Home() {
           <Image src={img.src} alt="" fill style={{objectFit:'contain'}} />
         </div>
       ))}
-
-      {/* ── Topbar nav — absolute, disappears on scroll ── */}
-      <nav className="topbar" aria-label="Main navigation">
-        {/* Links row — face floats above this via absolute positioning */}
-        <div className="nav-links-row">
-
-          {/* Face — absolute above links, travels horizontally on hover */}
-          <div className="nav-face" aria-hidden="true">
-            <span className="nf-eye left" />
-            <span className="nf-eye right" />
-            <span className="nf-smile" />
-            <span className="nf-crown" />
-          </div>
-
-          {/* About — 3 decorative images on hover (like Navie1/2/3 in reference) */}
-          <div className="nav-link-item">
-            <div className="nav-deco-img ndi-1">
-              <Image src="/images/bird.avif" alt="" fill style={{objectFit:'contain'}} />
-            </div>
-            <div className="nav-deco-img ndi-2">
-              <Image src="/images/bunny_face.avif" alt="" fill style={{objectFit:'cover'}} />
-            </div>
-            <div className="nav-deco-img ndi-3">
-              <Image src="/images/computer_face.avif" alt="" fill style={{objectFit:'cover'}} />
-            </div>
-            <a href="#about">sobre</a>
-            <span className="nav-oval" />
-            <span className="nav-sub">em andamento</span>
-          </div>
-
-          {/* Work — 2 decorative images on hover (Navie4 large + Navie5 small) */}
-          <div className="nav-link-item">
-            <div className="nav-deco-img ndi-1">
-              <Image src="/images/flowers_more.avif" alt="" fill style={{objectFit:'cover'}} />
-            </div>
-            <div className="nav-deco-img ndi-7">
-              <Image src="/images/flower.avif" alt="" fill style={{objectFit:'cover'}} />
-            </div>
-            <a href="/work">Trabalho</a>
-            <span className="nav-oval" />
-          </div>
-
-          {/* Connect — small social-style deco */}
-          <div className="nav-link-item">
-            <div className="nav-deco-img ndi-1">
-              <Image src="/images/gundam.avif" alt="" fill style={{objectFit:'cover'}} />
-            </div>
-            <div className="nav-deco-img ndi-2">
-              <Image src="/images/map.avif" alt="" fill style={{objectFit:'cover'}} />
-            </div>
-            <a href="#connect">Conectar</a>
-            <span className="nav-oval" />
-          </div>
-
-        </div>
-      </nav>
-
-      {/* ── Hero ── */}
-      <section className="hero-stage" id="home">
-        <div className="hero-copy" data-hero-copy>
-          <p className="eyebrow" data-hero-fade>backend / desenvolvedor fullstack</p>
-
-          {/* masked line reveal */}
-          <h1 aria-label="Olá, sou Henri Okayama.">
-            <span className="line-mask" aria-hidden="true"><span className="hero-line">Olá, sou Henri</span></span>
-            <span className="line-mask" aria-hidden="true"><span className="hero-line">Okayama.</span></span>
-          </h1>
-
-          <p className="role-title" aria-label="Desenvolvedor Fullstack">
-            <span className="line-mask" aria-hidden="true"><span className="hero-line">Desenvolvedor Fullstack</span></span>
-          </p>
-
-          <p className="intro" data-hero-fade>
-            Construo sistemas web confiáveis que ajudam produtos a se moverem mais rápido — com arquitetura backend pensada e execução fullstack limpa.
-          </p>
-
-          <div className="hero-actions" data-hero-fade>
-            <a className="hero-cta" href="#work" data-magnetic="0.3">
-              ver trabalhos <span className="hero-cta-arrow" aria-hidden="true">↗</span>
-            </a>
-            <a className="hero-cta is-ghost" href="#connect" data-magnetic="0.3">contato</a>
-          </div>
-        </div>
-
-        <div className="portrait-zone" data-hero-visual>
-          <div className="floating-orbit orbit-one">Backend</div>
-          <div className="floating-orbit orbit-two">Frontend</div>
-          <Pochita3D />
-          <div className="book-strip" />
-        </div>
-
-        <div className="scroll-hint" data-hero-fade aria-hidden="true">
-          <span className="scroll-dot" />
-          <span>role para explorar</span>
-          <span className="scroll-line" />
-        </div>
-      </section>
+      </div>
 
       {/* ── Marquee band ── */}
       <div className="marquee-band" data-marquee="32" aria-hidden="true">
@@ -557,7 +517,7 @@ export default function Home() {
       </section>
 
       {/* ── Values — torn paper cards with scroll parallax ── */}
-      <section className="values-scene" data-panel data-tilt="right">
+      <section className="values-scene" id="beliefs" data-panel data-tilt="right">
         <span className="panel-label">crenças</span>
         <p className="values-headline" data-split="chars">3 coisas em que acredito fortemente</p>
         <div className="values-stack">
@@ -583,7 +543,7 @@ export default function Home() {
       </section>
 
       {/* ── Stack ── */}
-      <section className="content-panel skills-panel" data-panel data-tilt="left">
+      <section className="content-panel skills-panel" id="stack" data-panel data-tilt="left">
         <span className="panel-label">02 / stack</span>
         <h2 data-split="words">Ferramentas que uso para entregar aplicações web sólidas.</h2>
         <div className="skill-cloud" data-reveal-group>
@@ -625,7 +585,7 @@ export default function Home() {
       </section>
 
       {/* ── Projects ── */}
-      <section className="project-stack" data-panel data-tilt="left" data-reveal-group>
+      <section className="project-stack" id="projects" data-panel data-tilt="left" data-reveal-group>
         <span className="panel-label">04 / projetos selecionados</span>
         {projects.map((project, index) => (
           <article
