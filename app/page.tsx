@@ -5,10 +5,13 @@ import Image from 'next/image';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import Pochita3D from '@/components/Pochita3D';
+import { useSiteMotion } from '@/app/lib/useSiteMotion';
+import { hasFinePointer, prefersReducedMotion, whenSiteReady } from '@/app/lib/siteReady';
 
 gsap.registerPlugin(ScrollTrigger);
 
-const ROLE_CHARS = 'Desenvolvedor Fullstack'.split('');
+const MARQUEE_ITEMS = ['Backend', 'APIs REST', 'Fullstack', 'Node.js', 'Arquitetura', 'Next.js', 'PostgreSQL', 'Docker'];
+const FOOTER_MARQUEE = ['vamos conversar', 'henri.okayama@gmail.com', 'disponível para projetos'];
 
 const tagIconMap: Record<string, string> = {
   'Node.js': '/images/svg/node-fill-svgrepo-com.svg',
@@ -136,54 +139,80 @@ export default function Home() {
   const rootRef = useRef<HTMLElement>(null);
   const [lookFor, setLookFor] = useState<boolean[]>([false, false, false]);
   const [expandedProject, setExpandedProject] = useState<string | null>(null);
+  const [hoveredProject, setHoveredProject] = useState<string | null>(null);
   const popupRef = useRef<HTMLDivElement>(null);
+  const followerRef = useRef<HTMLDivElement>(null);
+
+  useSiteMotion(rootRef);
 
   const toggleLookFor = (i: number) =>
     setLookFor(prev => prev.map((v, j) => (j === i ? !v : v)));
 
   useEffect(() => {
+    const reduced = prefersReducedMotion();
+    const fine = hasFinePointer();
+    let offReady = () => {};
+    const navCleanups: (() => void)[] = [];
+
     const ctx = gsap.context(() => {
+      if (reduced) return;
 
-      // ── 1. Eyebrow fade in
-      gsap.from('.eyebrow', { opacity: 0, y: 18, duration: 0.7, ease: 'power3.out' });
+      // ── 1. Hero intro — waits for the loader / page transition to uncover the screen
+      const lines = gsap.utils.toArray<HTMLElement>('.hero-line');
+      const fades = gsap.utils.toArray<HTMLElement>('[data-hero-fade]');
+      gsap.set(lines, { yPercent: 115, rotate: 3 });
+      gsap.set(fades, { y: 26, opacity: 0 });
+      gsap.set('[data-hero-visual]', { opacity: 0, scale: 1.06 });
+      gsap.set('.topbar', { y: -30, opacity: 0 });
 
-      // ── 2. Hero h1 char-by-char
-      const heroChars = gsap.utils.toArray<HTMLElement>('.hero-char');
-      gsap.from(heroChars, {
-        opacity: 0, y: 48, rotate: () => gsap.utils.random(-12, 12),
-        duration: 0.6, stagger: 0.035, ease: 'back.out(1.6)', delay: 0.2,
-      });
+      const intro = gsap.timeline({ paused: true, defaults: { ease: 'power4.out' } })
+        .to('.topbar', { y: 0, opacity: 1, duration: 1, ease: 'power3.out' }, 0)
+        .to(lines, { yPercent: 0, rotate: 0, duration: 1.15, stagger: 0.1 }, 0.05)
+        .to(fades, { y: 0, opacity: 1, duration: 0.9, stagger: 0.08 }, 0.45)
+        .to('[data-hero-visual]', { opacity: 1, scale: 1, duration: 1.4, ease: 'expo.out' }, 0.6);
+      offReady = whenSiteReady(() => intro.play());
 
-      // ── 3. Role title char-by-char (accent colour)
-      const roleChars = gsap.utils.toArray<HTMLElement>('.role-char');
-      gsap.from(roleChars, {
-        opacity: 0, y: 32, rotate: () => gsap.utils.random(-8, 8),
-        duration: 0.5, stagger: 0.04, ease: 'back.out(1.4)', delay: 0.55,
-      });
-
-      // ── 4. Intro paragraph
-      gsap.from('.intro', { opacity: 0, y: 22, duration: 0.8, delay: 1.1, ease: 'power3.out' });
-
-      // ── 5. Floating orbits loop
-      gsap.to('.orbit-one', { y: -16, rotate: 6, duration: 2.8, repeat: -1, yoyo: true, ease: 'sine.inOut' });
-      gsap.to('.orbit-two', { y: 14, rotate: -5, duration: 3.4, repeat: -1, yoyo: true, ease: 'sine.inOut', delay: 0.6 });
-
-      // ── 7. Panels scroll reveal
-      gsap.utils.toArray<HTMLElement>('[data-panel]').forEach((panel) => {
-        gsap.from(panel, {
-          opacity: 0, y: 60,
-          rotate: panel.dataset.tilt === 'right' ? 1.8 : -1.8,
-          duration: 0.9, ease: 'power3.out',
-          scrollTrigger: { trigger: panel, start: 'top 80%', toggleActions: 'play none none reverse' },
+      // ── 2. Hero scroll-out: copy drifts up & fades, Pochita sinks (desktop)
+      const mm = gsap.matchMedia();
+      mm.add('(min-width: 1024px)', () => {
+        gsap.to('[data-hero-copy]', {
+          yPercent: -10, opacity: 0.15, ease: 'none',
+          scrollTrigger: { trigger: '.hero-stage', start: 'top top', end: 'bottom 30%', scrub: true },
+        });
+        gsap.to('.portrait-zone', {
+          yPercent: 12, ease: 'none',
+          scrollTrigger: { trigger: '.hero-stage', start: 'top top', end: 'bottom top', scrub: true },
         });
       });
 
-      // ── 8. Torn paper value cards parallax on scroll
+      // ── 3. Scroll hint pulse
+      gsap.to('.scroll-dot', { scale: 1.6, opacity: 0.45, duration: 0.9, yoyo: true, repeat: -1, ease: 'sine.inOut' });
+      gsap.fromTo('.scroll-line', { scaleX: 0.2 }, { scaleX: 1, duration: 1.4, yoyo: true, repeat: -1, ease: 'sine.inOut' });
+
+      // ── 4. Floating orbits loop
+      gsap.to('.orbit-one', { y: -16, rotate: 6, duration: 2.8, repeat: -1, yoyo: true, ease: 'sine.inOut' });
+      gsap.to('.orbit-two', { y: 14, rotate: -5, duration: 3.4, repeat: -1, yoyo: true, ease: 'sine.inOut', delay: 0.6 });
+
+      // ── 5. Panels scroll reveal
+      gsap.utils.toArray<HTMLElement>('[data-panel]').forEach((panel) => {
+        gsap.from(panel, {
+          opacity: 0, y: 80, scale: 0.97,
+          rotate: panel.dataset.tilt === 'right' ? 1.8 : -1.8,
+          duration: 1.1, ease: 'power3.out',
+          scrollTrigger: { trigger: panel, start: 'top 92%', once: true },
+        });
+      });
+
+      // ── 6. Torn paper value cards: drop in, then parallax on scroll
+      gsap.from('.value-card', {
+        yPercent: 40, opacity: 0, rotate: () => gsap.utils.random(-14, 14),
+        duration: 1.1, stagger: 0.12, ease: 'back.out(1.4)',
+        scrollTrigger: { trigger: '.values-stack', start: 'top 85%', once: true },
+      });
       gsap.utils.toArray<HTMLElement>('.value-card').forEach((card, i) => {
         const dir = i % 2 === 0 ? -1 : 1;
         gsap.to(card, {
           y: dir * 40,
-          rotate: `+=${dir * 3}`,
           ease: 'none',
           scrollTrigger: {
             trigger: '.values-scene',
@@ -194,17 +223,58 @@ export default function Home() {
         });
       });
 
-      // ── 9. Skill pills hover
-      gsap.utils.toArray<HTMLElement>('.skill-pill, .work-card').forEach((el) => {
-        el.addEventListener('mouseenter', () => gsap.to(el, { y: -7, scale: 1.04, duration: 0.22, ease: 'power2.out' }));
-        el.addEventListener('mouseleave', () => gsap.to(el, { y: 0, scale: 1, duration: 0.22, ease: 'power2.out' }));
+      if (!fine) return;
+
+      // ── 7. Skill pills hover
+      gsap.utils.toArray<HTMLElement>('.skill-pill').forEach((el) => {
+        el.addEventListener('mouseenter', () => gsap.to(el, { y: -7, scale: 1.06, rotate: gsap.utils.random(-4, 4), duration: 0.25, ease: 'back.out(2)' }));
+        el.addEventListener('mouseleave', () => gsap.to(el, { y: 0, scale: 1, rotate: 0, duration: 0.3, ease: 'power2.out' }));
       });
 
+      // ── 8. Project rows: title slides, follower card shows the stack
+      const follower = followerRef.current;
+      const frame = follower?.querySelector<HTMLElement>('.proj-frame');
+      const badge = follower?.querySelector<HTMLElement>('.proj-badge');
+      if (follower && frame) {
+        gsap.set(follower, { opacity: 0, scale: 0.85, rotate: -4 });
+        if (badge) gsap.to(badge, { rotation: 360, duration: 14, repeat: -1, ease: 'none' });
+        const toX = gsap.quickTo(follower, 'x', { duration: 0.45, ease: 'power3' });
+        const toY = gsap.quickTo(follower, 'y', { duration: 0.45, ease: 'power3' });
+        const toRot = gsap.quickTo(frame, 'rotation', { duration: 0.6, ease: 'power3' });
+        let lastX = 0;
+        const onMove = (e: MouseEvent) => {
+          const w = frame.offsetWidth || 280;
+          const h = frame.offsetHeight || 200;
+          const flip = e.clientX > window.innerWidth - w - 80;
+          toX(e.clientX + (flip ? -w - 32 : 32));
+          toY(e.clientY - h / 2);
+          toRot(gsap.utils.clamp(-10, 10, (e.clientX - lastX) * 0.6));
+          lastX = e.clientX;
+        };
+        window.addEventListener('mousemove', onMove);
+        navCleanups.push(() => window.removeEventListener('mousemove', onMove));
+
+        gsap.utils.toArray<HTMLElement>('.work-card').forEach((row) => {
+          const title = row.querySelector('.g-title-inner');
+          const index = row.querySelector('.g-index');
+          row.addEventListener('mouseenter', () => {
+            setHoveredProject(row.dataset.project ?? null);
+            if (title) gsap.to(title, { x: 14, duration: 0.45, ease: 'power3.out' });
+            if (index) gsap.to(index, { x: 4, duration: 0.35, ease: 'power3.out' });
+            gsap.to(follower, { opacity: 1, scale: 1, rotate: 0, duration: 0.4, ease: 'back.out(1.4)' });
+            gsap.fromTo(frame, { scale: 0.94 }, { scale: 1, duration: 0.45, ease: 'power3.out' });
+          });
+          row.addEventListener('mouseleave', () => {
+            if (title) gsap.to(title, { x: 0, duration: 0.5, ease: 'power3.out' });
+            if (index) gsap.to(index, { x: 0, duration: 0.4, ease: 'power3.out' });
+            gsap.to(follower, { opacity: 0, scale: 0.85, rotate: -4, duration: 0.3, ease: 'power3.in' });
+          });
+        });
+      }
     }, rootRef);
 
     // ── Nav face travels to hovered link (outside ctx so listeners survive revert)
     const face = document.querySelector<HTMLElement>('.nav-face');
-    const navCleanups: (() => void)[] = [];
 
     if (face) {
       // Snapshot every item's deco images so we can hard-reset others on enter
@@ -312,6 +382,7 @@ export default function Home() {
     window.addEventListener('click', handleClick);
 
     return () => {
+      offReady();
       ctx.revert();
       navCleanups.forEach(fn => fn());
       window.removeEventListener('click', handleClick);
@@ -346,6 +417,7 @@ export default function Home() {
         <div
           key={i}
           className="side-img-abs"
+          data-parallax={40 + (i % 4) * 30}
           style={{
             left: img.left,
             right: img.right,
@@ -418,56 +490,68 @@ export default function Home() {
 
       {/* ── Hero ── */}
       <section className="hero-stage" id="home">
-        <div className="hero-copy">
-          <p className="eyebrow">backend / desenvolvedor fullstack</p>
+        <div className="hero-copy" data-hero-copy>
+          <p className="eyebrow" data-hero-fade>backend / desenvolvedor fullstack</p>
 
-          {/* char-by-char headline */}
-          <h1 aria-label="Olá, sou Henri Okayama">
-            <>
-              {'Olá, sou Henri'.split('').map((ch, i) => (
-                <span className="hero-char" key={`line1-${i}`} style={{ display: 'inline-block', whiteSpace: ch === ' ' ? 'pre' : 'normal' }}>
-                  {ch === ' ' ? '\u00A0' : ch}
-                </span>
-              ))}
-              <br />
-              {'Okayama.'.split('').map((ch, i) => (
-                <span className="hero-char" key={`line2-${i}`} style={{ display: 'inline-block', whiteSpace: ch === ' ' ? 'pre' : 'normal' }}>
-                  {ch === ' ' ? '\u00A0' : ch}
-                </span>
-              ))}
-            </>
+          {/* masked line reveal */}
+          <h1 aria-label="Olá, sou Henri Okayama.">
+            <span className="line-mask" aria-hidden="true"><span className="hero-line">Olá, sou Henri</span></span>
+            <span className="line-mask" aria-hidden="true"><span className="hero-line">Okayama.</span></span>
           </h1>
 
-          {/* role title char-by-char with accent colour */}
           <p className="role-title" aria-label="Desenvolvedor Fullstack">
-            {ROLE_CHARS.map((ch, i) => (
-              <span className="role-char" key={i} style={{ display: 'inline-block', whiteSpace: ch === ' ' ? 'pre' : 'normal' }}>
-                {ch === ' ' ? '\u00A0' : ch}
-              </span>
-            ))}
+            <span className="line-mask" aria-hidden="true"><span className="hero-line">Desenvolvedor Fullstack</span></span>
           </p>
 
-          <p className="intro">
+          <p className="intro" data-hero-fade>
             Construo sistemas web confiáveis que ajudam produtos a se moverem mais rápido — com arquitetura backend pensada e execução fullstack limpa.
           </p>
+
+          <div className="hero-actions" data-hero-fade>
+            <a className="hero-cta" href="#work" data-magnetic="0.3">
+              ver trabalhos <span className="hero-cta-arrow" aria-hidden="true">↗</span>
+            </a>
+            <a className="hero-cta is-ghost" href="#connect" data-magnetic="0.3">contato</a>
+          </div>
         </div>
 
-        <div className="portrait-zone">
+        <div className="portrait-zone" data-hero-visual>
           <div className="floating-orbit orbit-one">Backend</div>
           <div className="floating-orbit orbit-two">Frontend</div>
           <Pochita3D />
           <div className="book-strip" />
         </div>
+
+        <div className="scroll-hint" data-hero-fade aria-hidden="true">
+          <span className="scroll-dot" />
+          <span>role para explorar</span>
+          <span className="scroll-line" />
+        </div>
       </section>
+
+      {/* ── Marquee band ── */}
+      <div className="marquee-band" data-marquee="32" aria-hidden="true">
+        <div className="marquee-track" data-marquee-track>
+          {[0, 1].map((copy) => (
+            <div className="marquee-group" key={copy}>
+              {[...MARQUEE_ITEMS, ...MARQUEE_ITEMS].map((item, i) => (
+                <span className="marquee-item" key={i}>
+                  {item}<span className="marquee-star">✦</span>
+                </span>
+              ))}
+            </div>
+          ))}
+        </div>
+      </div>
 
       {/* ── About ── */}
       <section className="content-panel about-panel" id="about" data-panel data-tilt="left">
         <span className="panel-label">01 / sobre</span>
         <div className="panel-grid">
-          <h2>Desenvolvedor focado em lógica backend confiável e interfaces úteis.</h2>
-          <div className="panel-text">
-            <p>Gosto de transformar necessidades de negócio em aplicações estáveis — conectando APIs, bancos de dados e fluxos frontend em produtos que parecem simples de usar.</p>
-            <p>Meu trabalho é guiado por estrutura limpa, código mantível, performance e os pequenos detalhes que fazem uma experiência digital parecer polida.</p>
+          <h2 data-split="words">Desenvolvedor focado em lógica backend confiável e interfaces úteis.</h2>
+          <div className="panel-text" data-reveal-group>
+            <p data-reveal-item>Gosto de transformar necessidades de negócio em aplicações estáveis — conectando APIs, bancos de dados e fluxos frontend em produtos que parecem simples de usar.</p>
+            <p data-reveal-item>Meu trabalho é guiado por estrutura limpa, código mantível, performance e os pequenos detalhes que fazem uma experiência digital parecer polida.</p>
           </div>
         </div>
       </section>
@@ -475,12 +559,13 @@ export default function Home() {
       {/* ── Values — torn paper cards with scroll parallax ── */}
       <section className="values-scene" data-panel data-tilt="right">
         <span className="panel-label">crenças</span>
-        <p className="values-headline">3 coisas em que acredito fortemente</p>
+        <p className="values-headline" data-split="chars">3 coisas em que acredito fortemente</p>
         <div className="values-stack">
           {values.map((v, i) => (
             <div
               className="value-card"
               key={i}
+              data-tilt3d="14"
               style={{
                 transform: `rotate(${v.rotate}) perspective(1200px)`,
               }}
@@ -500,10 +585,10 @@ export default function Home() {
       {/* ── Stack ── */}
       <section className="content-panel skills-panel" data-panel data-tilt="left">
         <span className="panel-label">02 / stack</span>
-        <h2>Ferramentas que uso para entregar aplicações web sólidas.</h2>
-        <div className="skill-cloud">
+        <h2 data-split="words">Ferramentas que uso para entregar aplicações web sólidas.</h2>
+        <div className="skill-cloud" data-reveal-group>
           {skills.map((skill) => (
-            <span className="skill-pill" key={skill}>
+            <span className="skill-pill" key={skill} data-reveal-item>
               {tagIconMap[skill] && (
                 <Image 
                   src={tagIconMap[skill]} 
@@ -523,14 +608,14 @@ export default function Home() {
       <section className="content-panel work-panel" id="work" data-panel data-tilt="right">
         <span className="panel-label">03 / trabalho</span>
         <div className="panel-grid">
-          <h2>Experiência moldada em torno de qualidade backend e entrega fullstack.</h2>
-          <div className="timeline">
-            <article>
+          <h2 data-split="words">Experiência moldada em torno de qualidade backend e entrega fullstack.</h2>
+          <div className="timeline" data-reveal-group>
+            <article data-reveal-item data-tilt3d="6">
               <span>Presente</span>
               <h3>Desenvolvedor Fullstack</h3>
               <p>Construindo e mantendo aplicações web, APIs, integrações e interfaces responsivas.</p>
             </article>
-            <article>
+            <article data-reveal-item data-tilt3d="6">
               <span>Foco</span>
               <h3>Sistemas Backend</h3>
               <p>Projetando lógica de serviço, modelos de dados, endpoints REST e fluxos de aplicação confiáveis.</p>
@@ -540,13 +625,19 @@ export default function Home() {
       </section>
 
       {/* ── Projects ── */}
-      <section className="project-stack" data-panel data-tilt="left">
+      <section className="project-stack" data-panel data-tilt="left" data-reveal-group>
         <span className="panel-label">04 / projetos selecionados</span>
         {projects.map((project, index) => (
-          <article className="work-card" key={project.title}>
-            <span>{String(index + 1).padStart(2, '0')}</span>
+          <article
+            className="work-card"
+            key={project.title}
+            data-project={project.title}
+            data-cursor="stack"
+            data-reveal-item
+          >
+            <span className="g-index">{String(index + 1).padStart(2, '0')}</span>
             <div>
-              <h3>{project.title}</h3>
+              <h3><span className="g-title-inner">{project.title}</span></h3>
               <p>{project.description}</p>
             </div>
             <ul>
@@ -576,6 +667,31 @@ export default function Home() {
           </article>
         ))}
       </section>
+
+      {/* ── Project follower — shows the hovered project's stack ── */}
+      <div className="proj-follower" ref={followerRef} aria-hidden="true">
+        <div className="proj-frame">
+          <span className="proj-frame-label">stack</span>
+          <strong className="proj-frame-title">{hoveredProject}</strong>
+          <div className="proj-frame-icons">
+            {projects.find(p => p.title === hoveredProject)?.tags.map((tag) => (
+              <span className="proj-frame-chip" key={tag}>
+                {tagIconMap[tag] && <Image src={tagIconMap[tag]} alt="" width={18} height={18} />}
+                {tag}
+              </span>
+            ))}
+          </div>
+        </div>
+        <svg className="proj-badge" viewBox="0 0 100 100">
+          <defs>
+            <path id="proj-badge-circle" d="M50,50 m-36,0 a36,36 0 1,1 72,0 a36,36 0 1,1 -72,0" />
+          </defs>
+          <circle cx="50" cy="50" r="49" />
+          <text>
+            <textPath href="#proj-badge-circle">ver mais • ver mais • ver mais •</textPath>
+          </text>
+        </svg>
+      </div>
 
       {/* ── Tags Popup ── */}
       {expandedProject && (
@@ -619,10 +735,10 @@ export default function Home() {
       <section className="lookfor-section" data-panel data-tilt="left">
         <div className="lookfor-card">
           <div className="lookfor-left">
-            <h3 className="lookfor-title">O que busco</h3>
-            <ul className="lookfor-list">
+            <h3 className="lookfor-title" data-split="chars">O que busco</h3>
+            <ul className="lookfor-list" data-reveal-group>
               {LOOK_FOR_ITEMS.map((label, i) => (
-                <li className="lookfor-row" key={label}>
+                <li className="lookfor-row" key={label} data-reveal-item>
                   <button
                     type="button"
                     className={`lookfor-check${lookFor[i] ? ' is-checked' : ''}`}
@@ -636,7 +752,7 @@ export default function Home() {
                 </li>
               ))}
             </ul>
-            <a className="lookfor-cta" href="mailto:henri.okayama@gmail.com">vamos conversar!</a>
+            <a className="lookfor-cta" href="mailto:henri.okayama@gmail.com" data-magnetic="0.4">vamos conversar!</a>
           </div>
 
           <div className="lookfor-right" aria-hidden="true">
@@ -672,13 +788,28 @@ export default function Home() {
       {/* ── Connect ── */}
       <section className="connect-panel" id="connect" data-panel data-tilt="right">
         <p className="eyebrow">disponível para colaboração</p>
-        <h2>Vamos construir algo confiável,<br />rápido e fácil de manter.</h2>
-        <div className="connect-actions">
-          <a href="https://www.linkedin.com/in/henri-okayama-33a091279/" target="_blank" rel="noreferrer">LinkedIn</a>
-          <a href="https://github.com/Nunderns" target="_blank" rel="noreferrer">GitHub</a>
-          <a href="mailto:henri.okayama@gmail.com">Email</a>
+        <h2 data-split="chars">Vamos construir algo confiável, rápido e fácil de manter.</h2>
+        <div className="connect-actions" data-reveal-group>
+          <a href="https://www.linkedin.com/in/henri-okayama-33a091279/" target="_blank" rel="noreferrer" data-magnetic data-reveal-item>LinkedIn</a>
+          <a href="https://github.com/Nunderns" target="_blank" rel="noreferrer" data-magnetic data-reveal-item>GitHub</a>
+          <a href="mailto:henri.okayama@gmail.com" data-magnetic data-reveal-item>Email</a>
         </div>
       </section>
+
+      {/* ── Footer marquee ── */}
+      <a className="footer-marquee" href="mailto:henri.okayama@gmail.com" data-marquee="24" data-marquee-dir="right" data-cursor="email">
+        <div className="marquee-track" data-marquee-track>
+          {[0, 1].map((copy) => (
+            <div className="marquee-group" key={copy}>
+              {[...FOOTER_MARQUEE, ...FOOTER_MARQUEE].map((item, i) => (
+                <span className="footer-marquee-item" key={i}>
+                  {item}<span className="marquee-star">✦</span>
+                </span>
+              ))}
+            </div>
+          ))}
+        </div>
+      </a>
     </main>
   );
 }

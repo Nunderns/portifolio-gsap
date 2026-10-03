@@ -3,6 +3,9 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { Gochi_Hand } from "next/font/google";
 import "./globals.css";
 import PageTransition from "./components/PageTransition";
+import SiteLoader from "./components/SiteLoader";
+import SiteChrome from "./components/SiteChrome";
+import "lenis/dist/lenis.css";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -32,11 +35,13 @@ export default function RootLayout({
 }>) {
   return (
     <html
-      lang="en"
+      lang="pt-BR"
       className={`${geistSans.variable} ${geistMono.variable} ${gochiHand.variable}`}
       data-scroll-behavior="smooth"
     >
       <body>
+        <SiteLoader />
+        <SiteChrome />
         <PageTransition>{children}</PageTransition>
       </body>
     </html>
